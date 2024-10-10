@@ -35,6 +35,7 @@ import { getTextXlsxFiles } from "../__xlsx__/read_demo_xlsx";
 import {
   getCFBeginningAt,
   getColPosition,
+  getDataValidationBeginningAt,
   getRowPosition,
   getWorkbookCell,
   getWorkbookCellBorder,
@@ -317,6 +318,86 @@ describe("Import xlsx data", () => {
     expect(cf.rule.type).toEqual("CellIsRule");
     expect((cf.rule as CellIsRule).operator).toEqual(operator);
     expect((cf.rule as CellIsRule).values).toEqual(values);
+  });
+
+  test.each([
+    ["number", "A2"],
+    ["decimal", "B2"],
+    ["list", "C2"],
+    ["list", "D2"],
+    ["date", "E2"],
+    ["time", "F2"],
+    ["textLength", "G2"],
+    ["date", "H2"],
+    ["custom", "I2"],
+  ])("Can import data validation rule %s", (ruleType, cellXc) => {
+    const testSheet = getWorkbookSheet("jestDataValidations", convertedData)!;
+    const dvRule = getDataValidationBeginningAt(cellXc, testSheet);
+    switch (ruleType) {
+      case "number":
+      case "time":
+      case "textLength":
+        // Unsupported data validation type 'textLength'
+        expect(dvRule).toBeUndefined();
+        break;
+      case "decimal":
+        expect(dvRule).toMatchObject({
+          criterion: {
+            type: "isBetween",
+            values: ["1", "100"],
+          },
+          ranges: ["B2:B6"],
+          isBlocking: true,
+        });
+        break;
+      case "list":
+        if (cellXc === "C2") {
+          expect(dvRule).toMatchObject({
+            criterion: {
+              type: "isValueInRange",
+              values: ["$C$2:$C$6"],
+            },
+            ranges: ["C2:C6"],
+            isBlocking: false,
+          });
+          break;
+        }
+        expect(dvRule).toMatchObject({
+          criterion: {
+            type: "isValueInList",
+            values: ["option1", "option2", "option3"],
+          },
+          ranges: ["D2:D6"],
+          isBlocking: false,
+        });
+        break;
+      case "date":
+        if (cellXc === "E2") {
+          // Unsupported 'notEqual' for date data validation
+          expect(dvRule).toBeUndefined();
+          break;
+        }
+        expect(dvRule).toMatchObject({
+          criterion: {
+            type: "dateIsAfter",
+            dateValue: "exactDate",
+            values: ["12/1/2023"],
+          },
+          ranges: ["H2:H6"],
+          isBlocking: false,
+        });
+        break;
+      case "custom":
+        expect(dvRule).toMatchObject({
+          criterion: {
+            type: "customFormula",
+            values: ["=ISNUMBER(I2)"],
+          },
+          ranges: ["I2:I6"],
+          isBlocking: false,
+        });
+        break;
+    }
   });
 
   test.each([
