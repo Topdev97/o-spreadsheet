@@ -1,5 +1,6 @@
-import { ChartOptions, LinearScaleOptions } from "chart.js";
+import { LinearScaleOptions } from "chart.js";
 import { DeepPartial } from "chart.js/dist/types/utils";
+import { DEFAULT_CHART_PADDING, GRAY_300 } from "../../../../constants";
 import { LocaleFormat } from "../../../../types";
 import {
   AxisDesign,
@@ -7,13 +8,19 @@ import {
   ChartRuntimeGenerationArgs,
   ChartWithDataSetDefinition,
   GenericDefinition,
+  LegendPosition,
   LineChartDefinition,
   PyramidChartDefinition,
   ScatterChartDefinition,
   WaterfallChartDefinition,
 } from "../../../../types/chart";
+import {
+  GeoChartDefinition,
+  GeoChartRuntimeGenerationArgs,
+} from "../../../../types/chart/geo_chart";
 import { RadarChartDefinition } from "../../../../types/chart/radar_chart";
 import { getChartTimeOptions } from "../../../chart_date";
+import { getColorScale } from "../../../color";
 import { formatValue } from "../../../format/format";
 import { isDefined, range, removeFalsyAttributes } from "../../../misc";
 import {
@@ -23,7 +30,8 @@ import {
   getDefinedAxis,
 } from "../chart_common";
 
-type ChartScales = ChartOptions["scales"];
+// type ChartScales = ChartOptions["scales"]; DeepPartial<ScaleChartOptions<"line">["scales"]>
+type ChartScales = any; // ADRM TODO
 
 export function getBarChartScales(
   definition: GenericDefinition<BarChartDefinition>,
@@ -182,6 +190,43 @@ export function getRadarChartScales(
   };
 }
 
+export function getGeoChartScales(
+  definition: GeoChartDefinition,
+  args: GeoChartRuntimeGenerationArgs
+): ChartScales {
+  const { locale, axisFormats, availableRegions } = args;
+
+  const geoLegendPosition = legendPositionToGeoLegendPosition(definition.legendPosition);
+  const region = definition.displayedRegion
+    ? availableRegions.find((r) => r.id === definition.displayedRegion)
+    : availableRegions[0];
+
+  const format = axisFormats?.y || axisFormats?.y1;
+  return {
+    projection: {
+      projection: region?.defaultProjection,
+      axis: "x" as const,
+    },
+    color: {
+      axis: "x",
+      display: definition.legendPosition !== "none",
+      border: { color: GRAY_300 },
+      grid: { color: GRAY_300 },
+      ticks: {
+        color: chartFontColor(definition.background),
+        callback: formatTickValue({ locale, format }),
+      },
+      legend: {
+        position: geoLegendPosition,
+        align: geoLegendPosition.includes("right") ? "left" : "right",
+        margin: getLegendMargin(definition),
+      },
+      interpolate: getRuntimeColorScale(definition),
+      missing: definition.missingValueColor || "#ffffff",
+    },
+  };
+}
+
 function getChartAxisTitleRuntime(design?: AxisDesign):
   | {
       display: boolean;
@@ -259,5 +304,50 @@ function getChartAxis(
       stacked: options?.stacked,
       title: getChartAxisTitleRuntime(design),
     };
+  }
+}
+
+function getRuntimeColorScale(definition: GeoChartDefinition) {
+  if (!definition.colorScale || typeof definition.colorScale === "string") {
+    return definition.colorScale || "oranges";
+  }
+  const scaleColors = [{ value: 0, color: definition.colorScale.minColor }];
+  if (definition.colorScale.midColor) {
+    scaleColors.push({ value: 0.5, color: definition.colorScale.midColor });
+  }
+  scaleColors.push({ value: 1, color: definition.colorScale.maxColor });
+  return getColorScale(scaleColors);
+}
+
+function getLegendMargin(definition: GeoChartDefinition) {
+  switch (definition.legendPosition) {
+    case "top":
+    case "right":
+      const hasTitle = !!definition.title.text;
+      const topMargin = hasTitle ? DEFAULT_CHART_PADDING + 30 : DEFAULT_CHART_PADDING;
+      return { top: topMargin, left: DEFAULT_CHART_PADDING, right: DEFAULT_CHART_PADDING };
+    case "bottom":
+    case "left":
+    case "none":
+      return {
+        left: DEFAULT_CHART_PADDING,
+        right: DEFAULT_CHART_PADDING,
+        bottom: DEFAULT_CHART_PADDING,
+      };
+  }
+}
+
+function legendPositionToGeoLegendPosition(position: LegendPosition) {
+  switch (position) {
+    case "top":
+      return "top-left";
+    case "right":
+      return "top-right";
+    case "bottom":
+      return "bottom-right";
+    case "left":
+      return "bottom-left";
+    case "none":
+      return "bottom-left";
   }
 }

@@ -46,6 +46,17 @@ export function getLineChartLayout(
   };
 }
 
+export function getGeoChartLayout(
+  definition: GenericDefinition<ChartWithDataSetDefinition>
+): ChartLayout {
+  return {
+    padding: computeChartPadding({
+      displayTitle: !!definition.title?.text,
+      displayLegend: false,
+    }),
+  };
+}
+
 export function getPieChartLayout(definition: PieChartDefinition): ChartLayout {
   return {
     padding: { left: 20, right: 20, top: definition.title ? 10 : 25, bottom: 10 },
