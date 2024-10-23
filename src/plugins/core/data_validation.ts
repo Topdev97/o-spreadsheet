@@ -1,3 +1,4 @@
+import { compile } from "../../formulas";
 import {
   copyRangeWithNewSheetId,
   deepCopy,
@@ -287,10 +288,17 @@ export class DataValidationPlugin
     const evaluator = dataValidationEvaluatorRegistry.get(criterion.type);
     if (
       criterion.values.some((value) => {
-        if (value.startsWith("=")) {
-          return evaluator.allowedValues === "onlyLiterals";
-        } else if (evaluator.allowedValues === "onlyFormulas") {
+        if (!value.startsWith("=") && evaluator.allowedValues === "onlyFormulas") {
           return true;
+        }
+        if (value.startsWith("=")) {
+          if (evaluator.allowedValues === "onlyLiterals") {
+            return true;
+          }
+          if (compile(value).isBadExpression) {
+            return true;
+          }
+          return false;
         } else {
           return !evaluator.isCriterionValueValid(value);
         }
