@@ -18,6 +18,15 @@ describe("Chart title", () => {
     expect(fixture).toMatchSnapshot();
   });
 
+  test("Can render a chart title component with a standalone composer", async () => {
+    await mountChartTitle({
+      title: "=A1",
+      updateTitle: () => {},
+      style: {},
+    });
+    expect(fixture).toMatchSnapshot();
+  });
+
   test("Can render a chart title component with default title prop if not provided", async () => {
     await mountChartTitle({
       updateTitle: () => {},

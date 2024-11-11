@@ -1,6 +1,7 @@
 import { ChartOptions, LinearScaleOptions } from "chart.js";
 import { DeepPartial } from "chart.js/dist/types/utils";
-import { LocaleFormat } from "../../../../types";
+import { _t } from "../../../../translation";
+import { Getters, LocaleFormat } from "../../../../types";
 import {
   AxisDesign,
   BarChartDefinition,
@@ -21,11 +22,13 @@ import {
   chartFontColor,
   formatTickValue,
   getDefinedAxis,
+  getEvaluatedChartTitle,
 } from "../chart_common";
 
 type ChartScales = ChartOptions["scales"];
 
 export function getBarChartScales(
+  getters: Getters,
   definition: GenericDefinition<BarChartDefinition>,
   args: ChartRuntimeGenerationArgs
 ): ChartScales {
@@ -33,14 +36,17 @@ export function getBarChartScales(
   const { trendDataSetsValues: trendDatasets, locale, axisFormats } = args;
   const options = { stacked: definition.stacked, locale: locale };
   if (definition.horizontal) {
-    scales.x = getChartAxis(definition, "bottom", "values", { ...options, format: axisFormats?.x });
-    scales.y = getChartAxis(definition, "left", "labels", options);
+    scales.x = getChartAxis(getters, definition, "bottom", "values", {
+      ...options,
+      format: axisFormats?.x,
+    });
+    scales.y = getChartAxis(getters, definition, "left", "labels", options);
   } else {
-    scales.x = getChartAxis(definition, "bottom", "labels", options);
+    scales.x = getChartAxis(getters, definition, "bottom", "labels", options);
     const leftAxisOptions = { ...options, format: axisFormats?.y };
-    scales.y = getChartAxis(definition, "left", "values", leftAxisOptions);
+    scales.y = getChartAxis(getters, definition, "left", "values", leftAxisOptions);
     const rightAxisOptions = { ...options, format: axisFormats?.y1 };
-    scales.y1 = getChartAxis(definition, "right", "values", rightAxisOptions);
+    scales.y1 = getChartAxis(getters, definition, "right", "values", rightAxisOptions);
   }
   scales = removeFalsyAttributes(scales);
 
@@ -61,6 +67,7 @@ export function getBarChartScales(
 }
 
 export function getLineChartScales(
+  getters: Getters,
   definition: GenericDefinition<LineChartDefinition>,
   args: ChartRuntimeGenerationArgs
 ): ChartScales {
@@ -69,9 +76,17 @@ export function getLineChartScales(
   const stacked = definition.stacked;
 
   let scales: ChartScales = {
-    x: getChartAxis(definition, "bottom", "labels", { locale }),
-    y: getChartAxis(definition, "left", "values", { locale, stacked, format: axisFormats?.y }),
-    y1: getChartAxis(definition, "right", "values", { locale, stacked, format: axisFormats?.y1 }),
+    x: getChartAxis(getters, definition, "bottom", "labels", { locale }),
+    y: getChartAxis(getters, definition, "left", "values", {
+      locale,
+      stacked,
+      format: axisFormats?.y,
+    }),
+    y1: getChartAxis(getters, definition, "right", "values", {
+      locale,
+      stacked,
+      format: axisFormats?.y1,
+    }),
   };
   scales = removeFalsyAttributes(scales);
 
@@ -105,10 +120,11 @@ export function getLineChartScales(
 }
 
 export function getScatterChartScales(
+  getters: Getters,
   definition: GenericDefinition<ScatterChartDefinition>,
   args: ChartRuntimeGenerationArgs
 ) {
-  const lineScales = getLineChartScales(definition, args);
+  const lineScales = getLineChartScales(getters, definition, args);
   return {
     ...lineScales,
     x: {
@@ -119,6 +135,7 @@ export function getScatterChartScales(
 }
 
 export function getWaterfallChartScales(
+  getters: Getters,
   definition: WaterfallChartDefinition,
   args: ChartRuntimeGenerationArgs
 ): ChartScales {
@@ -127,7 +144,7 @@ export function getWaterfallChartScales(
   definition.dataSets;
   const scales: ChartScales = {
     x: {
-      ...getChartAxis(definition, "bottom", "labels", { locale }),
+      ...getChartAxis(getters, definition, "bottom", "labels", { locale }),
       grid: { display: false },
     },
     y: {
@@ -143,7 +160,7 @@ export function getWaterfallChartScales(
       grid: {
         lineWidth: (context) => (context.tick.value === 0 ? 2 : 1),
       },
-      title: getChartAxisTitleRuntime(definition.axesDesign?.y),
+      title: getChartAxisTitleRuntime(getters, definition.axesDesign?.y),
     },
   };
 
@@ -156,10 +173,11 @@ export function getWaterfallChartScales(
 }
 
 export function getPyramidChartScales(
+  getters: Getters,
   definition: PyramidChartDefinition,
   args: ChartRuntimeGenerationArgs
 ): ChartScales {
-  const scales = getBarChartScales(definition, args);
+  const scales = getBarChartScales(getters, definition, args);
   const scalesXCallback = scales!.x!.ticks!.callback as (value: number) => string;
   scales!.x!.ticks!.callback = (value: number) => scalesXCallback(Math.abs(value));
 
@@ -182,7 +200,10 @@ export function getRadarChartScales(
   };
 }
 
-function getChartAxisTitleRuntime(design?: AxisDesign):
+function getChartAxisTitleRuntime(
+  getters: Getters,
+  design?: AxisDesign
+):
   | {
       display: boolean;
       text: string;
@@ -195,10 +216,10 @@ function getChartAxisTitleRuntime(design?: AxisDesign):
     }
   | undefined {
   if (design?.title?.text) {
-    const { text, color, align, italic, bold } = design.title;
+    const { text, color, align, italic, bold } = getEvaluatedChartTitle(getters, design.title);
     return {
       display: true,
-      text,
+      text: text ? _t(text) : "",
       color,
       font: {
         style: italic ? "italic" : "normal",
@@ -211,6 +232,7 @@ function getChartAxisTitleRuntime(design?: AxisDesign):
 }
 
 function getChartAxis(
+  getters: Getters,
   definition: GenericDefinition<ChartWithDataSetDefinition>,
   position: "left" | "right" | "bottom",
   type: "values" | "labels",
@@ -236,7 +258,7 @@ function getChartAxis(
 
     return {
       position: position,
-      title: getChartAxisTitleRuntime(design),
+      title: getChartAxisTitleRuntime(getters, design),
       grid: {
         display: displayGridLines,
       },
@@ -257,7 +279,7 @@ function getChartAxis(
         display: false,
       },
       stacked: options?.stacked,
-      title: getChartAxisTitleRuntime(design),
+      title: getChartAxisTitleRuntime(getters, design),
     };
   }
 }

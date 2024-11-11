@@ -19,6 +19,7 @@ import {
   ExcelChartDataset,
   ExcelChartDefinition,
   LegendPosition,
+  TitleDesign,
 } from "../../../types/chart";
 import { RadarChartDefinition, RadarChartRuntime } from "../../../types/chart/radar_chart";
 import { CellErrorType } from "../../../types/errors";
@@ -38,6 +39,7 @@ import {
   toExcelLabelRange,
   transformChartDefinitionWithDataSetsWithZone,
   updateChartRangesWithDataSets,
+  updateTitleWithSheetReference,
 } from "./chart_common";
 import { CHART_COMMON_OPTIONS, truncateLabel } from "./chart_ui_common";
 import {
@@ -133,26 +135,39 @@ export class RadarChart extends AbstractChart {
   copyForSheetId(sheetId: UID): RadarChart {
     const dataSets = copyDataSetsWithNewSheetId(this.sheetId, sheetId, this.dataSets);
     const labelRange = copyLabelRangeWithNewSheetId(this.sheetId, sheetId, this.labelRange);
-    const definition = this.getDefinitionWithSpecificDataSets(dataSets, labelRange, sheetId);
+    const definition = this.getDefinitionWithSpecificDataSets(
+      dataSets,
+      labelRange,
+      this.title,
+      sheetId
+    );
     return new RadarChart(definition, sheetId, this.getters);
   }
 
   copyInSheetId(sheetId: UID): RadarChart {
+    const updatedTitle = updateTitleWithSheetReference(
+      this.getters,
+      this.sheetId,
+      sheetId,
+      this.title
+    );
     const definition = this.getDefinitionWithSpecificDataSets(
       this.dataSets,
       this.labelRange,
+      updatedTitle,
       sheetId
     );
     return new RadarChart(definition, sheetId, this.getters);
   }
 
   getDefinition(): RadarChartDefinition {
-    return this.getDefinitionWithSpecificDataSets(this.dataSets, this.labelRange);
+    return this.getDefinitionWithSpecificDataSets(this.dataSets, this.labelRange, this.title);
   }
 
   private getDefinitionWithSpecificDataSets(
     dataSets: DataSet[],
     labelRange: Range | undefined,
+    title: TitleDesign,
     targetSheetId?: UID
   ): RadarChartDefinition {
     const ranges: CustomizedDataSet[] = [];
@@ -171,7 +186,7 @@ export class RadarChart extends AbstractChart {
       labelRange: labelRange
         ? this.getters.getRangeString(labelRange, targetSheetId || this.sheetId)
         : undefined,
-      title: this.title,
+      title,
       stacked: this.stacked,
       aggregated: this.aggregated,
       fillArea: this.fillArea,
@@ -202,16 +217,19 @@ export class RadarChart extends AbstractChart {
   }
 
   updateRanges(applyChange: ApplyRangeChange): RadarChart {
-    const { dataSets, labelRange, isStale } = updateChartRangesWithDataSets(
+    const { dataSets, labelRange, title, isStale } = updateChartRangesWithDataSets(
       this.getters,
+      this.sheetId,
       applyChange,
       this.dataSets,
+      this.title,
+      undefined,
       this.labelRange
     );
     if (!isStale) {
       return this;
     }
-    const definition = this.getDefinitionWithSpecificDataSets(dataSets, labelRange);
+    const definition = this.getDefinitionWithSpecificDataSets(dataSets, labelRange, title);
     return new RadarChart(definition, this.sheetId, this.getters);
   }
 }
@@ -231,7 +249,7 @@ export function createRadarChartRuntime(chart: RadarChart, getters: Getters): Ra
       layout: getBarChartLayout(definition),
       scales: getRadarChartScales(definition, chartData),
       plugins: {
-        title: getChartTitle(definition),
+        title: getChartTitle(getters, definition),
         legend: getRadarChartLegend(definition, chartData),
         tooltip: getRadarChartTooltip(definition, chartData),
         chartShowValuesPlugin: getChartShowValues(definition, chartData),

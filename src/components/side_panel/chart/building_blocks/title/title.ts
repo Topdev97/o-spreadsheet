@@ -1,8 +1,11 @@
 import { Component, useExternalListener, useState } from "@odoo/owl";
 import { GRAY_300 } from "../../../../../constants";
+import { getEvaluatedChartTitle } from "../../../../../helpers/figures/charts";
 import { Color, SpreadsheetChildEnv, TitleDesign } from "../../../../../types";
 import { ColorPickerWidget } from "../../../../color_picker/color_picker_widget";
+import { StandaloneComposer } from "../../../../composer/standalone_composer/standalone_composer";
 import { css } from "../../../../helpers";
+import { Checkbox } from "../../../components/checkbox/checkbox";
 import { Section } from "../../../components/section/section";
 
 css/* scss */ `
@@ -51,11 +54,12 @@ interface Props {
 
 export interface ChartTitleState {
   activeTool: string;
+  isComposerActive: boolean;
 }
 
 export class ChartTitle extends Component<Props, SpreadsheetChildEnv> {
   static template = "o-spreadsheet.ChartTitle";
-  static components = { Section, ColorPickerWidget };
+  static components = { Section, ColorPickerWidget, Checkbox, StandaloneComposer };
   static props = {
     title: { type: String, optional: true },
     updateTitle: Function,
@@ -77,6 +81,7 @@ export class ChartTitle extends Component<Props, SpreadsheetChildEnv> {
 
   state = useState({
     activeTool: "",
+    isComposerActive: this.props.title?.startsWith("="),
   });
 
   updateTitle(ev: InputEvent) {
@@ -116,5 +121,23 @@ export class ChartTitle extends Component<Props, SpreadsheetChildEnv> {
   closeMenus() {
     this.state.activeTool = "";
     this.openedEl = null;
+  }
+
+  toggleComposerMode(isComposerEnabled: boolean): void {
+    let updatedTitle: string = "";
+
+    if (!isComposerEnabled) {
+      updatedTitle =
+        getEvaluatedChartTitle(this.env.model.getters, {
+          text: this.props.title,
+        }).text || "";
+    }
+
+    this.props.updateTitle(updatedTitle);
+    this.state.isComposerActive = isComposerEnabled;
+  }
+
+  handleComposerInput(formula: string) {
+    this.props.updateTitle(formula.startsWith("=") ? formula : "=" + formula);
   }
 }

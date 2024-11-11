@@ -6,7 +6,16 @@
       <t t-else="">Title</t>
     </t>
     <Section class="'o-chart-title'" title="title.toString()">
+      <StandaloneComposer
+        t-if="state.isComposerActive"
+        onConfirm.bind="handleComposerInput"
+        composerContent="props.title"
+        defaultRangeSheetId="env.model.getters.getActiveSheetId()"
+        placeholder="'Enter formula or select a cell'"
+        class="'o-sidePanel-composer'"
+      />
       <input
+        t-else=""
         type="text"
         class="o-input"
         t-att-value="props.title"
@@ -87,6 +96,12 @@
           title="fill_color"
           icon="'o-spreadsheet-Icon.TEXT_COLOR'"
           class="'o-hoverable-button o-menu-item-button'"
+        />
+        <div class="flex-grow-1"/>
+        <Checkbox
+          label.translate="Use formula as title"
+          value="state.isComposerActive"
+          onChange.bind="toggleComposerMode"
         />
       </div>
     </Section>

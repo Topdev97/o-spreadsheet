@@ -19,6 +19,7 @@ import {
   openChartDesignSidePanel,
 } from "../../test_helpers/chart_helpers";
 import {
+  activateSheet,
   copy,
   createChart,
   createGaugeChart,
@@ -582,6 +583,34 @@ describe("charts", () => {
         label: "serie_2",
       },
     ]);
+  });
+
+  test("Chart title updates after copy/pasting to another sheet if title is a cell reference", async () => {
+    createChart(
+      model,
+      {
+        dataSets: [{ dataRange: "C1:C4" }],
+        labelRange: "A2:A4",
+        type: "line",
+        title: { text: "=A1" },
+        axesDesign: { x: { title: { text: "=B1" } }, y: { title: { text: "=C1" } } },
+      },
+      chartId
+    );
+
+    model.dispatch("SELECT_FIGURE", { id: chartId });
+    copy(model);
+    createSheet(model, { sheetId: "Sheet2" });
+    activateSheet(model, "Sheet2");
+    paste(model, "A1");
+
+    const newChartId = model.getters.getFigures("Sheet2")[0].id;
+    const definition = model.getters.getChartDefinition(newChartId) as LineChartDefinition;
+    expect(definition.title).toEqual({ text: "=Sheet1!A1" });
+    expect(definition.axesDesign).toEqual({
+      x: { title: { text: "=Sheet1!B1" } },
+      y: { title: { text: "=Sheet1!C1" } },
+    });
   });
 
   test("can edit chart data series vertical axis", async () => {

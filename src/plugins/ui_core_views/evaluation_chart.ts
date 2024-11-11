@@ -1,7 +1,17 @@
 import { BACKGROUND_CHART_COLOR } from "../../constants";
-import { chartFontColor, chartRuntimeFactory, chartToImage } from "../../helpers/figures/charts";
+import {
+  chartFontColor,
+  chartRuntimeFactory,
+  chartToImage,
+  getEvaluatedChartTitle,
+} from "../../helpers/figures/charts";
 import { Color, ExcelWorkbookData, FigureData, Range, UID } from "../../types";
-import { ChartRuntime, ExcelChartDefinition } from "../../types/chart/chart";
+import {
+  AxesDesign,
+  ChartRuntime,
+  ExcelChartDefinition,
+  TitleDesign,
+} from "../../types/chart/chart";
 import {
   CoreViewCommand,
   invalidateCFEvaluationCommands,
@@ -90,6 +100,27 @@ export class EvaluationChartPlugin extends UIPlugin<EvaluationChartState> {
     };
   }
 
+  /**
+   * Converts cell references in the chart title and axis titles to their corresponding cell values.
+   */
+  evaluateTitleAndAxesFormulas(sheetId: UID, title?: TitleDesign, axesDesign?: AxesDesign) {
+    // Convert title to cell value from cell reference
+    const chartTitle = title && getEvaluatedChartTitle(this.getters, title);
+
+    // Loop axes design and convert title to cell value from cell reference
+    const newAxesDesign: AxesDesign = {};
+    if (axesDesign) {
+      for (const [key, value] of Object.entries(axesDesign)) {
+        newAxesDesign[key] = {
+          ...value,
+          title: value.title && getEvaluatedChartTitle(this.getters, value.title),
+        };
+      }
+    }
+
+    return { title: chartTitle, axesDesign: newAxesDesign };
+  }
+
   exportForExcel(data: ExcelWorkbookData) {
     for (const sheet of data.sheets) {
       if (!sheet.images) {
@@ -104,9 +135,18 @@ export class EvaluationChartPlugin extends UIPlugin<EvaluationChartState> {
         const figureId = figure.id;
         const figureData = this.getters.getChart(figureId)?.getDefinitionForExcel();
         if (figureData) {
+          const { title, axesDesign } = this.evaluateTitleAndAxesFormulas(
+            sheet.id,
+            figureData.title,
+            figureData.axesDesign
+          );
           figures.push({
             ...figure,
-            data: figureData,
+            data: {
+              ...figureData,
+              title,
+              axesDesign,
+            },
           });
         } else {
           const chart = this.getters.getChart(figureId);

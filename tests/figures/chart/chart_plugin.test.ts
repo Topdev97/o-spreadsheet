@@ -26,6 +26,7 @@ import {
   groupHeaders,
   hideColumns,
   hideRows,
+  moveColumns,
   redo,
   selectCell,
   setCellContent,
@@ -1374,6 +1375,72 @@ describe("title", function () {
       });
       scales = getChartConfiguration(model, "1").options.scales;
       expect(scales.x!["title"].font.style).toEqual("italic");
+    }
+  );
+
+  test.each(["line", "bar", "pyramid", "combo", "waterfall", "scatter"] as const)(
+    "Title updates when it references a cell and the cell content changes",
+    (type) => {
+      setCellContent(model, "A1", "Hello");
+      createChart(
+        model,
+        {
+          dataSets: [{ dataRange: "A1:B1" }],
+          labelRange: "A2:B2",
+          type,
+          title: { text: "=A1" },
+          axesDesign: {
+            x: { title: { text: "=A1" } },
+          },
+        },
+        "1"
+      );
+
+      let options = getChartConfiguration(model, "1").options;
+      expect(options!.plugins!.title!.text).toEqual("Hello");
+      expect(options!.scales!.x!.title.text).toEqual("Hello");
+
+      setCellContent(model, "A1", "World");
+
+      options = getChartConfiguration(model, "1").options;
+      expect(options!.plugins!.title!.text).toEqual("World");
+      expect(options!.scales!.x!.title.text).toEqual("World");
+    }
+  );
+
+  test.each(["line", "bar", "pyramid", "combo", "waterfall", "scatter"] as const)(
+    "Title updates when it references a cell, and changes are made to sheet ranges",
+    (type) => {
+      setCellContent(model, "A1", "Hello World");
+      createChart(
+        model,
+        {
+          dataSets: [{ dataRange: "A1:B1" }],
+          labelRange: "A2:B2",
+          type,
+          title: { text: "=A1" },
+          axesDesign: {
+            x: { title: { text: "=A1" } },
+          },
+        },
+        "1"
+      );
+
+      let definition = model.getters.getChartDefinition("1");
+      expect(definition.title.text).toEqual("=A1");
+
+      let options = getChartConfiguration(model, "1").options;
+      expect(options!.plugins!.title!.text).toEqual("Hello World");
+      expect(options!.scales!.x!.title.text).toEqual("Hello World");
+
+      moveColumns(model, "B", ["A"]);
+
+      definition = model.getters.getChartDefinition("1");
+      expect(definition.title.text).toEqual("=B1");
+
+      options = getChartConfiguration(model, "1").options;
+      expect(options!.plugins!.title!.text).toEqual("Hello World");
+      expect(options!.scales!.x!.title.text).toEqual("Hello World");
     }
   );
 });

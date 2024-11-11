@@ -1,4 +1,5 @@
 import { transformZone } from "../../../collaborative/ot/ot_helpers";
+import { compile } from "../../../formulas";
 import { _t } from "../../../translation";
 import {
   AddColumnsRowsCommand,
@@ -9,6 +10,7 @@ import {
   DOMCoordinates,
   DOMDimension,
   Getters,
+  isMatrix,
   Locale,
   LocaleFormat,
   Range,
@@ -18,6 +20,7 @@ import {
   Zone,
 } from "../../../types";
 import {
+  AxesDesign,
   ChartAxisFormats,
   ChartWithDataSetDefinition,
   CustomizedDataSet,
@@ -25,6 +28,7 @@ import {
   DatasetValues,
   ExcelChartDataset,
   GenericDefinition,
+  TitleDesign,
 } from "../../../types/chart/chart";
 import { CellErrorType } from "../../../types/errors";
 import { ColorGenerator, relativeLuminance } from "../../color";
@@ -46,8 +50,11 @@ export const TREND_LINE_XAXIS_ID = "x1";
  */
 export function updateChartRangesWithDataSets(
   getters: CoreGetters,
+  sheetId: UID,
   applyChange: ApplyRangeChange,
   chartDataSets: DataSet[],
+  chartTitle: TitleDesign,
+  axesDesign?: AxesDesign,
   chartLabelRange?: Range
 ) {
   let isStale = false;
@@ -87,11 +94,65 @@ export function updateChartRangesWithDataSets(
     labelRange = range;
   }
   const dataSets = dataSetsWithUndefined.filter(isDefined);
+
+  // Adapt chart title
+  const updatedTitle = adaptChartTitle(chartTitle.text, applyChange, getters, sheetId);
+  if (updatedTitle !== chartTitle.text) {
+    isStale = true;
+  }
+
+  // Adapt axes design
+  const updatedAxesDesign: AxesDesign | undefined = {};
+  if (axesDesign) {
+    for (const axisId in axesDesign) {
+      const axisDesign = axesDesign[axisId];
+      if (axisDesign?.title?.text) {
+        const updatedAxisDesignTitle = adaptChartTitle(
+          axisDesign.title.text,
+          applyChange,
+          getters,
+          sheetId
+        );
+        if (updatedAxisDesignTitle !== axisDesign.title.text) {
+          isStale = true;
+        }
+        updatedAxesDesign[axisId] = {
+          ...axisDesign,
+          title: { ...axisDesign.title, text: updatedAxisDesignTitle },
+        };
+      }
+    }
+  }
+
   return {
     isStale,
     dataSets,
+    title: { ...chartTitle, text: updatedTitle },
+    axesDesign: updatedAxesDesign,
     labelRange,
   };
+}
+
+/**
+ * Adapt chart title by updating range references in the formula.
+ */
+export function adaptChartTitle(
+  title: string | undefined,
+  applyChange: ApplyRangeChange,
+  getters: CoreGetters,
+  sheetId: UID
+): string | undefined {
+  if (title && title.startsWith("=")) {
+    const compiledFormula = compile(title);
+    const updatedDependencies = compiledFormula.dependencies.map((xc) => {
+      const range = getters.getRangeFromSheetXC(sheetId, xc);
+      const changedRange = applyChange(range);
+      return changedRange.changeType === "NONE" ? range : changedRange.range;
+    });
+
+    return getters.getFormulaString(sheetId, compiledFormula.tokens, updatedDependencies);
+  }
+  return title;
 }
 
 /**
@@ -123,6 +184,70 @@ export function copyLabelRangeWithNewSheetId(
   range?: Range
 ): Range | undefined {
   return range ? copyRangeWithNewSheetId(sheetIdFrom, sheetIdTo, range) : undefined;
+}
+
+/**
+ * Copies a chart title and updates any references to cell ranges from one sheet to another.
+ */
+export function updateTitleWithSheetReference(
+  getters: CoreGetters,
+  sourceSheetId: UID,
+  targetSheetId: UID,
+  chartTitle: TitleDesign
+): TitleDesign {
+  if (chartTitle.text && chartTitle.text.startsWith("=")) {
+    const parsedFormula = compile(chartTitle.text);
+    const sourceRangeDependencies = parsedFormula.dependencies.map((cellRef) => {
+      return getters.getRangeFromSheetXC(sourceSheetId, cellRef);
+    });
+    const updatedFormulaText = getters.getFormulaString(
+      targetSheetId,
+      parsedFormula.tokens,
+      sourceRangeDependencies
+    );
+    return {
+      ...chartTitle,
+      text: updatedFormulaText,
+    };
+  }
+
+  return chartTitle;
+}
+
+/**
+ * Copies an axes design and updates any references to cell ranges from one sheet to another.
+ */
+export function updateAxesDesignWithSheetReference(
+  getters: CoreGetters,
+  sourceSheetId: UID,
+  targetSheetId: UID,
+  axesDesign?: AxesDesign
+): AxesDesign | undefined {
+  if (!axesDesign) {
+    return undefined;
+  }
+
+  const updatedAxesDesign: AxesDesign = {};
+
+  for (const axisId in axesDesign) {
+    const axisDesign = axesDesign[axisId as keyof AxesDesign];
+    if (axisDesign?.title?.text && axisDesign.title.text.startsWith("=")) {
+      const updatedAxisTitle = updateTitleWithSheetReference(
+        getters,
+        sourceSheetId,
+        targetSheetId,
+        axisDesign.title
+      );
+      updatedAxesDesign[axisId] = {
+        ...axisDesign,
+        title: updatedAxisTitle,
+      };
+    } else {
+      updatedAxesDesign[axisId] = axisDesign;
+    }
+  }
+
+  return updatedAxesDesign;
 }
 
 /**
@@ -430,6 +555,18 @@ export const CHART_AXIS_CHOICES = [
   { value: "left", label: _t("Left") },
   { value: "right", label: _t("Right") },
 ];
+
+export function getEvaluatedChartTitle(getters: Getters, title: TitleDesign): TitleDesign {
+  if (title.text && title.text.startsWith("=")) {
+    const evaluated = getters.evaluateFormula(getters.getActiveSheetId(), title.text);
+    return {
+      ...title,
+      text: evaluated && !isMatrix(evaluated) ? evaluated.toString() : "",
+    };
+  }
+
+  return title;
+}
 
 export function getPieColors(colors: ColorGenerator, dataSetsValues: DatasetValues[]): Color[] {
   const pieColors: Color[] = [];

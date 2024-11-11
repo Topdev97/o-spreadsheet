@@ -1,5 +1,5 @@
 import { Component } from "@odoo/owl";
-import { GRAY_300, SELECTION_BORDER_COLOR } from "../../../constants";
+import { ComponentsImportance, GRAY_300, SELECTION_BORDER_COLOR } from "../../../constants";
 import { AutoCompleteProviderDefinition } from "../../../registries";
 import { Store, useLocalStore, useStore } from "../../../store_engine";
 import { ComposerFocusType, SpreadsheetChildEnv, UID } from "../../../types/index";
@@ -13,8 +13,10 @@ import { StandaloneComposerStore } from "./standalone_composer_store";
 css/* scss */ `
   .o-spreadsheet {
     .o-standalone-composer {
+      position: relative;
       min-height: 24px;
       box-sizing: border-box;
+      z-index: ${ComponentsImportance.StandaloneComposer};
 
       border-bottom: 1px solid;
       border-color: ${GRAY_300};

@@ -19,6 +19,7 @@ import {
   DatasetDesign,
   ExcelChartDataset,
   ExcelChartDefinition,
+  TitleDesign,
 } from "../../../types/chart/chart";
 import { LegendPosition } from "../../../types/chart/common_chart";
 import { ScatterChartDefinition, ScatterChartRuntime } from "../../../types/chart/scatter_chart";
@@ -38,7 +39,9 @@ import {
   toExcelDataset,
   toExcelLabelRange,
   transformChartDefinitionWithDataSetsWithZone,
+  updateAxesDesignWithSheetReference,
   updateChartRangesWithDataSets,
+  updateTitleWithSheetReference,
 } from "./chart_common";
 import { CHART_COMMON_OPTIONS, truncateLabel } from "./chart_ui_common";
 import {
@@ -115,12 +118,19 @@ export class ScatterChart extends AbstractChart {
   }
 
   getDefinition(): ScatterChartDefinition {
-    return this.getDefinitionWithSpecificDataSets(this.dataSets, this.labelRange);
+    return this.getDefinitionWithSpecificDataSets(
+      this.dataSets,
+      this.labelRange,
+      this.title,
+      this.axesDesign
+    );
   }
 
   private getDefinitionWithSpecificDataSets(
     dataSets: DataSet[],
     labelRange: Range | undefined,
+    title: TitleDesign,
+    axesDesign?: AxesDesign,
     targetSheetId?: UID
   ): ScatterChartDefinition {
     const ranges: CustomizedDataSet[] = [];
@@ -139,10 +149,10 @@ export class ScatterChart extends AbstractChart {
       labelRange: labelRange
         ? this.getters.getRangeString(labelRange, targetSheetId || this.sheetId)
         : undefined,
-      title: this.title,
+      title,
       labelsAsText: this.labelsAsText,
       aggregated: this.aggregated,
-      axesDesign: this.axesDesign,
+      axesDesign,
       showValues: this.showValues,
     };
   }
@@ -165,16 +175,24 @@ export class ScatterChart extends AbstractChart {
   }
 
   updateRanges(applyChange: ApplyRangeChange): ScatterChart {
-    const { dataSets, labelRange, isStale } = updateChartRangesWithDataSets(
+    const { dataSets, labelRange, title, axesDesign, isStale } = updateChartRangesWithDataSets(
       this.getters,
+      this.sheetId,
       applyChange,
       this.dataSets,
+      this.title,
+      this.axesDesign,
       this.labelRange
     );
     if (!isStale) {
       return this;
     }
-    const definition = this.getDefinitionWithSpecificDataSets(dataSets, labelRange);
+    const definition = this.getDefinitionWithSpecificDataSets(
+      dataSets,
+      labelRange,
+      title,
+      axesDesign
+    );
     return new ScatterChart(definition, this.sheetId, this.getters);
   }
 
@@ -205,14 +223,34 @@ export class ScatterChart extends AbstractChart {
   copyForSheetId(sheetId: UID): ScatterChart {
     const dataSets = copyDataSetsWithNewSheetId(this.sheetId, sheetId, this.dataSets);
     const labelRange = copyLabelRangeWithNewSheetId(this.sheetId, sheetId, this.labelRange);
-    const definition = this.getDefinitionWithSpecificDataSets(dataSets, labelRange, sheetId);
+    const definition = this.getDefinitionWithSpecificDataSets(
+      dataSets,
+      labelRange,
+      this.title,
+      this.axesDesign,
+      sheetId
+    );
     return new ScatterChart(definition, sheetId, this.getters);
   }
 
   copyInSheetId(sheetId: UID): ScatterChart {
+    const updatedTitle = updateTitleWithSheetReference(
+      this.getters,
+      this.sheetId,
+      sheetId,
+      this.title
+    );
+    const updatedAxesDesign = updateAxesDesignWithSheetReference(
+      this.getters,
+      this.sheetId,
+      sheetId,
+      this.axesDesign
+    );
     const definition = this.getDefinitionWithSpecificDataSets(
       this.dataSets,
       this.labelRange,
+      updatedTitle,
+      updatedAxesDesign,
       sheetId
     );
     return new ScatterChart(definition, sheetId, this.getters);
@@ -238,9 +276,9 @@ export function createScatterChartRuntime(
     options: {
       ...CHART_COMMON_OPTIONS,
       layout: getLineChartLayout(definition),
-      scales: getScatterChartScales(definition, chartData),
+      scales: getScatterChartScales(getters, definition, chartData),
       plugins: {
-        title: getChartTitle(definition),
+        title: getChartTitle(getters, definition),
         legend: getScatterChartLegend(definition, chartData),
         tooltip: getLineChartTooltip(definition, chartData),
         chartShowValuesPlugin: getChartShowValues(definition, chartData),
