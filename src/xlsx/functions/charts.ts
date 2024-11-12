@@ -1,5 +1,6 @@
-import { DEFAULT_CHART_FONT_SIZE } from "../../constants";
+import { CHART_TITLE_FONT_SIZE, DEFAULT_CHART_FONT_SIZE } from "../../constants";
 import { ColorGenerator, largeMax, range } from "../../helpers";
+import { chartMutedFontColor } from "../../helpers/figures/charts";
 import { Color, ExcelWorkbookData, FigureData } from "../../types";
 import { ExcelChartDataset, ExcelChartDefinition, TitleDesign } from "../../types/chart/chart";
 import { XMLAttributes, XMLString, XlsxHexColor } from "../../types/xlsx";
@@ -56,12 +57,10 @@ export function createChart(
   // <manualLayout/> to manually position the chart in the figure container
   let title = escapeXml``;
   if (chart.data.title?.text) {
-    const color = chart.data.title.color
-      ? toXlsxHexColor(chart.data.title.color)
-      : chart.data.fontColor;
+    const titleColor = toXlsxHexColor(chartMutedFontColor(chart.data.backgroundColor));
     title = escapeXml/*xml*/ `
       <c:title>
-        ${insertText(chart.data.title.text, color, DEFAULT_CHART_FONT_SIZE, chart.data.title)}
+        ${insertText(chart.data.title.text, titleColor, CHART_TITLE_FONT_SIZE, chart.data.title)}
         <c:overlay val="0" />
       </c:title>
     `;

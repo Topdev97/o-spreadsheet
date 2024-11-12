@@ -48,7 +48,12 @@ import {
 } from "../../test_helpers/helpers";
 
 import { ChartTerms } from "../../../src/components/translations_terms";
-import { FIGURE_ID_SPLITTER, MAX_CHAR_LABEL } from "../../../src/constants";
+import {
+  CHART_PADDING,
+  CHART_PADDING_SMALL,
+  FIGURE_ID_SPLITTER,
+  MAX_CHAR_LABEL,
+} from "../../../src/constants";
 import { range, toZone, zoneToXc } from "../../../src/helpers";
 import { BarChart } from "../../../src/helpers/figures/charts";
 import { ChartPlugin } from "../../../src/plugins/core";
@@ -2012,8 +2017,6 @@ describe("Chart design configuration", () => {
         createChart(
           model,
           {
-            dataSets: [{ dataRange: "B1:B2" }],
-            labelRange: "A1:A2",
             type: chartType,
             legendPosition: "none",
             title: { text: "" },
@@ -2022,10 +2025,10 @@ describe("Chart design configuration", () => {
         );
         const config = getChartConfiguration(model, "1");
         expect(config.options.layout.padding).toEqual({
-          top: 25,
-          bottom: 10,
-          left: 20,
-          right: 20,
+          top: CHART_PADDING,
+          bottom: CHART_PADDING_SMALL,
+          left: CHART_PADDING,
+          right: CHART_PADDING,
         });
       }
     );
@@ -2048,8 +2051,6 @@ describe("Chart design configuration", () => {
         createChart(
           model,
           {
-            dataSets: [{ dataRange: "B1:B2" }],
-            labelRange: "A1:A2",
             type: chartType,
             legendPosition: "bottom",
             title: { text: "" },
@@ -2058,15 +2059,15 @@ describe("Chart design configuration", () => {
         );
         let config = getChartConfiguration(model, "1");
         expect(config.options.layout.padding).toEqual({
-          top: 25,
-          bottom: 10,
-          left: 20,
-          right: 20,
+          top: CHART_PADDING,
+          bottom: CHART_PADDING_SMALL,
+          left: CHART_PADDING,
+          right: CHART_PADDING,
         });
 
         updateChart(model, "1", { legendPosition: "top" });
         config = getChartConfiguration(model, "1");
-        expect(config.options.layout.padding.top).toEqual(10);
+        expect(config.options.layout.padding.top).toEqual(CHART_PADDING_SMALL);
       }
     );
 
@@ -2076,21 +2077,26 @@ describe("Chart design configuration", () => {
         createChart(
           model,
           {
-            dataSets: [{ dataRange: "B1:B2" }],
-            labelRange: "A1:A2",
             type: chartType,
             legendPosition: "bottom",
             title: { text: "test" },
           },
           "1"
         );
-        const config = getChartConfiguration(model, "1");
+        let config = getChartConfiguration(model, "1");
         expect(config.options.layout.padding).toEqual({
-          top: 0,
-          bottom: 10,
-          left: 20,
-          right: 20,
+          top: CHART_PADDING_SMALL,
+          bottom: CHART_PADDING_SMALL,
+          left: CHART_PADDING,
+          right: CHART_PADDING,
         });
+        expect(config.options.plugins.title.padding).toEqual({
+          bottom: CHART_PADDING_SMALL,
+        });
+
+        updateChart(model, "1", { legendPosition: "top" });
+        config = getChartConfiguration(model, "1");
+        expect(config.options.plugins.title.padding).toEqual({ bottom: 0 });
       }
     );
   });

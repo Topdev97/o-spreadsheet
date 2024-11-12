@@ -165,7 +165,7 @@ describe("Scorecard charts computation", () => {
     const chartDesign = getChartDesign(model, chartId, sheetId);
 
     expect(chartDesign.baseline?.text).toEqual("1");
-    expect(chartDesign.baseline?.style.color).toBeSameColorAs("#525252");
+    expect(chartDesign.baseline?.style.color).toBeSameColorAs("#666666");
   });
 
   test("Baseline description and arrow with mode 'progress' are not displayed", () => {
@@ -178,7 +178,7 @@ describe("Scorecard charts computation", () => {
 
     expect(chartDesign.baselineDescr).toBeUndefined();
     expect(chartDesign.baselineArrow).toBeUndefined();
-    expect(chartDesign.baseline?.style.color).toBeSameColorAs("#525252");
+    expect(chartDesign.baseline?.style.color).toBeSameColorAs("#666666");
     expect(chartDesign.baseline?.text).toEqual("200.0%");
   });
 
@@ -264,7 +264,7 @@ describe("Scorecard charts computation", () => {
     const chartDesign = getChartDesign(model, chartId, sheetId);
 
     expect(chartDesign.baselineArrow).toBeUndefined();
-    expect(chartDesign.baseline?.style.color).toBeSameColorAs("#525252");
+    expect(chartDesign.baseline?.style.color).toBeSameColorAs("#666666");
     expect(chartDesign.baseline?.text).toEqual("0");
   });
 
@@ -507,7 +507,7 @@ describe("Scorecard charts rendering", () => {
   test("Baseline with mode 'text' is plainly displayed", () => {
     createScorecardChart(model, { keyValue: "A1", baseline: "B1", baselineMode: "text" }, chartId);
     renderScorecardChart(model, chartId, sheetId, canvas);
-    expect(scorecardChartStyle.baseline.color).toBeSameColorAs("#525252");
+    expect(scorecardChartStyle.baseline.color).toBeSameColorAs("#666666");
   });
 
   test("Key < baseline display in red with down arrow", () => {
@@ -527,7 +527,7 @@ describe("Scorecard charts rendering", () => {
   test("Key = baseline display default font color with no arrow", () => {
     createScorecardChart(model, { keyValue: "A1", baseline: "B2" }, chartId);
     renderScorecardChart(model, chartId, sheetId, canvas);
-    expect(scorecardChartStyle.baseline.color).toBeSameColorAs("#525252");
+    expect(scorecardChartStyle.baseline.color).toBeSameColorAs("#666666");
   });
 
   test("Key value and baseline are displayed with the cell style", () => {
