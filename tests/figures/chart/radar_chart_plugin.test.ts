@@ -127,4 +127,13 @@ describe("radar chart", () => {
     runtime = model.getters.getChartRuntime("chartId") as RadarChartRuntime;
     expect(runtime.chartJsConfig.options?.scales?.r?.["pointLabels"]?.color).toBe("#FFFFFF");
   });
+
+  test("Radar point scale starts at zero", () => {
+    const model = new Model();
+    setCellContent(model, "A2", "1");
+    setCellContent(model, "A3", "1");
+    createRadarChart(model, { dataSets: [{ dataRange: "A1:A3" }] }, "chartId");
+    const runtime = model.getters.getChartRuntime("chartId") as RadarChartRuntime;
+    expect(runtime.chartJsConfig.options?.scales?.r?.["beginAtZero"]).toBe(true);
+  });
 });

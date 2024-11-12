@@ -173,6 +173,7 @@ export function getRadarChartScales(
   const { locale, axisFormats } = args;
   return {
     r: {
+      beginAtZero: true,
       ticks: {
         callback: formatTickValue({ format: axisFormats?.r, locale }),
         backdropColor: definition.background || "#FFFFFF",
