@@ -16,7 +16,6 @@ export function drawHighlight(
   const color = highlight.color || HIGHLIGHT_COLOR;
 
   const { ctx } = renderingContext;
-  ctx.save();
   if (!highlight.noBorder) {
     if (highlight.dashed) {
       ctx.setLineDash([5, 3]);
@@ -35,5 +34,4 @@ export function drawHighlight(
     ctx.fillStyle = setColorAlpha(toHex(color), highlight.fillAlpha ?? 0.12);
     ctx.fillRect(x, y, width, height);
   }
-  ctx.restore();
 }
