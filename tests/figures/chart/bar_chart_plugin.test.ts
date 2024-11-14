@@ -1,4 +1,5 @@
 import { ChartCreationContext, Model } from "../../../src";
+import { BACKGROUND_CHART_COLOR } from "../../../src/constants";
 import { BarChart } from "../../../src/helpers/figures/charts";
 import { BarChartRuntime } from "../../../src/types/chart";
 import { getChartLegendLabels, isChartAxisStacked } from "../../test_helpers/chart_helpers";
@@ -134,6 +135,7 @@ describe("bar chart", () => {
     });
   });
 
+<<<<<<< master
   test("Bar chart legend", () => {
     const model = createModelFromGrid({
       A1: "1",
@@ -173,5 +175,56 @@ describe("bar chart", () => {
         strokeStyle: "#FFFFFF",
       },
     ]);
+||||||| 064a7cf84a7ffe61677c5b64ae61e380e05e56d8
+=======
+  test("Bar chart border are only shown for stacked chart", () => {
+    const model = createModelFromGrid({
+      A1: "first column dataset",
+      A2: "0",
+      A3: "1",
+      B1: "second column dataset",
+      B2: "10",
+      B3: "11",
+    });
+    createChart(
+      model,
+      {
+        type: "bar",
+        dataSets: [{ dataRange: "A1:B3" }, { dataRange: "B1:B3" }],
+      },
+      "chartId"
+    );
+    let runtime = model.getters.getChartRuntime("chartId") as BarChartRuntime;
+    expect(runtime.chartJsConfig.data.datasets[0].borderWidth).toBe(0);
+
+    updateChart(model, "chartId", { stacked: true });
+    runtime = model.getters.getChartRuntime("chartId") as BarChartRuntime;
+    expect(runtime.chartJsConfig.data.datasets[0].borderWidth).toBe(1);
+  });
+
+  test("Stacked Bar chart border are drawn with the chart background color", () => {
+    const model = createModelFromGrid({
+      A1: "first column dataset",
+      A2: "0",
+      A3: "1",
+      B1: "second column dataset",
+      B2: "10",
+      B3: "11",
+    });
+    createChart(
+      model,
+      {
+        type: "bar",
+        dataSets: [{ dataRange: "A1:B3" }, { dataRange: "B1:B3" }],
+      },
+      "chartId"
+    );
+    let runtime = model.getters.getChartRuntime("chartId") as BarChartRuntime;
+    expect(runtime.chartJsConfig.data.datasets[0].borderColor).toBe(BACKGROUND_CHART_COLOR);
+
+    updateChart(model, "chartId", { background: "#f00" });
+    runtime = model.getters.getChartRuntime("chartId") as BarChartRuntime;
+    expect(runtime.chartJsConfig.data.datasets[0].borderColor).toBe("#f00");
+>>>>>>> 2b0f5b96e0c0341ba01a7aa65734d46ca058c67a
   });
 });

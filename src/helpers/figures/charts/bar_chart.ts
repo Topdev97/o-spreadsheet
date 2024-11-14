@@ -1,4 +1,13 @@
+<<<<<<< master
 import type { ChartConfiguration } from "chart.js";
+||||||| 064a7cf84a7ffe61677c5b64ae61e380e05e56d8
+import type { ChartDataset, LegendOptions } from "chart.js";
+import { DeepPartial } from "chart.js/dist/types/utils";
+import { BACKGROUND_CHART_COLOR, BORDER_CHART_COLOR } from "../../../constants";
+=======
+import type { ChartDataset, LegendOptions } from "chart.js";
+import { DeepPartial } from "chart.js/dist/types/utils";
+>>>>>>> 2b0f5b96e0c0341ba01a7aa65734d46ca058c67a
 import { BACKGROUND_CHART_COLOR } from "../../../constants";
 import {
   AddColumnsRowsCommand,
@@ -245,5 +254,199 @@ export function createBarChartRuntime(chart: BarChart, getters: Getters): BarCha
     },
   };
 
+<<<<<<< master
+||||||| 064a7cf84a7ffe61677c5b64ae61e380e05e56d8
+  const xAxis = chart.horizontal ? valuesAxis : labelsAxis;
+  const yAxis = chart.horizontal ? labelsAxis : valuesAxis;
+  const { useLeftAxis, useRightAxis } = getDefinedAxis(chart.getDefinition());
+
+  config.options.scales.x = { ...xAxis, title: getChartAxisTitleRuntime(chart.axesDesign?.x) };
+  if (useLeftAxis) {
+    config.options.scales.y = {
+      ...yAxis,
+      position: "left",
+      title: getChartAxisTitleRuntime(chart.axesDesign?.y),
+    };
+  }
+  if (useRightAxis) {
+    config.options.scales.y1 = {
+      ...yAxis,
+      position: "right",
+      title: getChartAxisTitleRuntime(chart.axesDesign?.y1),
+    };
+  }
+  if (chart.stacked) {
+    // @ts-ignore chart.js type is broken
+    config.options.scales!.x!.stacked = true;
+    if (useLeftAxis) {
+      // @ts-ignore chart.js type is broken
+      config.options.scales!.y!.stacked = true;
+    }
+    if (useRightAxis) {
+      // @ts-ignore chart.js type is broken
+      config.options.scales!.y1!.stacked = true;
+    }
+  }
+
+  config.options.plugins!.chartShowValuesPlugin = {
+    showValues: chart.showValues,
+    background: chart.background,
+    horizontal: chart.horizontal,
+    callback: formatTickValue(localeFormat),
+  };
+
+  const definition = chart.getDefinition();
+  const colors = getChartColorsGenerator(definition, dataSetsValues.length);
+  const trendDatasets: any[] = [];
+  for (const index in dataSetsValues) {
+    const { label, data } = dataSetsValues[index];
+    const color = colors.next();
+    const dataset: ChartDataset<"bar", number[]> = {
+      label,
+      data,
+      borderColor: BORDER_CHART_COLOR,
+      borderWidth: 1,
+      backgroundColor: color,
+    };
+    config.data.datasets.push(dataset);
+
+    if (definition.dataSets?.[index]?.label) {
+      const label = definition.dataSets[index].label;
+      dataset.label = label;
+    }
+    if (definition.dataSets?.[index]?.yAxisId && !chart.horizontal) {
+      dataset["yAxisID"] = definition.dataSets[index].yAxisId;
+    }
+
+    const trend = definition.dataSets?.[index].trend;
+    if (!trend?.display || chart.horizontal) {
+      continue;
+    }
+
+    const trendDataset = getTrendDatasetForBarChart(trend, dataset);
+    if (trendDataset) {
+      trendDatasets.push(trendDataset);
+    }
+  }
+  if (trendDatasets.length) {
+    /* We add a second x axis here to draw the trend lines, with the labels length being
+     * set so that the second axis points match the classical x axis
+     */
+    const maxLength = Math.max(...trendDatasets.map((trendDataset) => trendDataset.data.length));
+    config.options.scales[TREND_LINE_XAXIS_ID] = {
+      ...xAxis,
+      labels: Array(maxLength).fill(""),
+      offset: false,
+      display: false,
+    };
+    /* These datasets must be inserted after the original
+     * datasets to ensure the way we distinguish the originals and trendLine datasets after
+     */
+    trendDatasets.forEach((x) => config.data.datasets!.push(x));
+
+    config.options.plugins!.tooltip!.callbacks!.title = function (tooltipItems) {
+      return tooltipItems.some((item) => item.dataset.xAxisID !== TREND_LINE_XAXIS_ID)
+        ? undefined
+        : "";
+    };
+  }
+
+=======
+  const xAxis = chart.horizontal ? valuesAxis : labelsAxis;
+  const yAxis = chart.horizontal ? labelsAxis : valuesAxis;
+  const { useLeftAxis, useRightAxis } = getDefinedAxis(chart.getDefinition());
+
+  config.options.scales.x = { ...xAxis, title: getChartAxisTitleRuntime(chart.axesDesign?.x) };
+  if (useLeftAxis) {
+    config.options.scales.y = {
+      ...yAxis,
+      position: "left",
+      title: getChartAxisTitleRuntime(chart.axesDesign?.y),
+    };
+  }
+  if (useRightAxis) {
+    config.options.scales.y1 = {
+      ...yAxis,
+      position: "right",
+      title: getChartAxisTitleRuntime(chart.axesDesign?.y1),
+    };
+  }
+  if (chart.stacked) {
+    // @ts-ignore chart.js type is broken
+    config.options.scales!.x!.stacked = true;
+    if (useLeftAxis) {
+      // @ts-ignore chart.js type is broken
+      config.options.scales!.y!.stacked = true;
+    }
+    if (useRightAxis) {
+      // @ts-ignore chart.js type is broken
+      config.options.scales!.y1!.stacked = true;
+    }
+  }
+
+  config.options.plugins!.chartShowValuesPlugin = {
+    showValues: chart.showValues,
+    background: chart.background,
+    horizontal: chart.horizontal,
+    callback: formatTickValue(localeFormat),
+  };
+
+  const definition = chart.getDefinition();
+  const colors = getChartColorsGenerator(definition, dataSetsValues.length);
+  const trendDatasets: any[] = [];
+  for (const index in dataSetsValues) {
+    const { label, data } = dataSetsValues[index];
+    const color = colors.next();
+    const dataset: ChartDataset<"bar", number[]> = {
+      label,
+      data,
+      borderColor: definition.background || BACKGROUND_CHART_COLOR,
+      borderWidth: definition.stacked ? 1 : 0,
+      backgroundColor: color,
+    };
+    config.data.datasets.push(dataset);
+
+    if (definition.dataSets?.[index]?.label) {
+      const label = definition.dataSets[index].label;
+      dataset.label = label;
+    }
+    if (definition.dataSets?.[index]?.yAxisId && !chart.horizontal) {
+      dataset["yAxisID"] = definition.dataSets[index].yAxisId;
+    }
+
+    const trend = definition.dataSets?.[index].trend;
+    if (!trend?.display || chart.horizontal) {
+      continue;
+    }
+
+    const trendDataset = getTrendDatasetForBarChart(trend, dataset);
+    if (trendDataset) {
+      trendDatasets.push(trendDataset);
+    }
+  }
+  if (trendDatasets.length) {
+    /* We add a second x axis here to draw the trend lines, with the labels length being
+     * set so that the second axis points match the classical x axis
+     */
+    const maxLength = Math.max(...trendDatasets.map((trendDataset) => trendDataset.data.length));
+    config.options.scales[TREND_LINE_XAXIS_ID] = {
+      ...xAxis,
+      labels: Array(maxLength).fill(""),
+      offset: false,
+      display: false,
+    };
+    /* These datasets must be inserted after the original
+     * datasets to ensure the way we distinguish the originals and trendLine datasets after
+     */
+    trendDatasets.forEach((x) => config.data.datasets!.push(x));
+
+    config.options.plugins!.tooltip!.callbacks!.title = function (tooltipItems) {
+      return tooltipItems.some((item) => item.dataset.xAxisID !== TREND_LINE_XAXIS_ID)
+        ? undefined
+        : "";
+    };
+  }
+
+>>>>>>> 2b0f5b96e0c0341ba01a7aa65734d46ca058c67a
   return { chartJsConfig: config, background: chart.background || BACKGROUND_CHART_COLOR };
 }
