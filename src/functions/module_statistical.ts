@@ -1057,6 +1057,8 @@ export const PEARSON: AddFunctionDescription = {
   },
   isExported: true,
 };
+
+// CORREL
 // In GSheet, CORREL is just an alias to PEARSON
 export const CORREL: AddFunctionDescription = PEARSON;
 
